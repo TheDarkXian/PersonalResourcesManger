@@ -1,0 +1,93 @@
+
+/* 全局基础字体与背景 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f8fafc;
+}
+
+/* 优化全局滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.5);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(203, 213, 225, 0.8);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 1);
+    border: 1px solid transparent;
+    background-clip: content-box;
+}
+
+/* 局部滚动条工具类 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+/* 模态框遮罩 */
+.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+}
+
+/* 优化 Ping 动画 - 扩散波纹效果 */
+@keyframes ping-ripple {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        transform: scale(1);
+    }
+    30% {
+        transform: scale(1.02);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        transform: scale(1);
+    }
+}
+
+.ping-highlight {
+    animation: ping-ripple 1.2s ease-out 2;
+    border-color: #3b82f6 !important;
+    z-index: 40 !important;
+    position: relative;
+}
+
+/* 懒加载淡入效果 */
+.animate-lazy-fade-in {
+    animation: lazy-fade-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes lazy-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 无限滚动加载动画 */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* 控制台平滑动画 */
+.console-transition {
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
