@@ -1,8 +1,9 @@
 
 import { UISettings, StyleProfile } from '../types';
+import { platformAdapter } from './platformAdapter';
 
-const STORAGE_KEY = 'ui_style_profiles_v1';
-const ACTIVE_PROFILE_KEY = 'ui_active_style_profile_id';
+const KEY_PROFILES = 'ui_style_profiles_v1';
+const KEY_ACTIVE_ID = 'ui_active_style_profile_id';
 
 const SYSTEM_PRESETS: StyleProfile[] = [
   {
@@ -42,7 +43,6 @@ const SYSTEM_PRESETS: StyleProfile[] = [
       filterBadgeActiveText: '#ffffff',
       filterBadgeInactiveBg: '#ffffff',
       filterBadgeInactiveText: '#64748b',
-      // 优化：增强对比
       countBadgeBg: '#f1f5f9',
       countBadgeBorder: '#cbd5e1',
       countBadgeText: '#475569',
@@ -108,7 +108,6 @@ const SYSTEM_PRESETS: StyleProfile[] = [
       filterBadgeActiveText: '#ffffff',
       filterBadgeInactiveBg: '#1e293b',
       filterBadgeInactiveText: '#94a3b8',
-      // 优化：深色模式下的亮度层级
       countBadgeBg: '#1e293b',
       countBadgeBorder: '#475569',
       countBadgeText: '#cbd5e1',
@@ -136,229 +135,30 @@ const SYSTEM_PRESETS: StyleProfile[] = [
       restoreBtnBg: '#f8fafc',
       restoreBtnText: '#0f172a',
     }
-  },
-  {
-    id: 'sys-matrix',
-    name: '黑客矩阵 (System)',
-    isSystem: true,
-    config: {
-      pageBg: '#000000',
-      headerBg: '#050505',
-      cardBg: '#0a0a0a',
-      accentColor: '#22c55e',
-      textColor: '#22c55e',
-      sidebarBg: 'rgba(0, 0, 0, 0.95)',
-      sidebarTextColor: '#166534',
-      sidebarActiveBg: '#22c55e',
-      sidebarActiveTextColor: '#000000',
-      primaryFontColor: '#22c55e',
-      secondaryFontColor: '#15803d',
-      mutedFontColor: '#14532d',
-      accentFontColor: '#4ade80',
-      defaultCardTitleBg: '#000000',
-      defaultCardTitleColor: '#22c55e',
-      controlPanelBg: '#050505',
-      controlPanelBorder: '#166534',
-      widgetBg: '#000000',
-      widgetBorder: '#15803d',
-      widgetText: '#22c55e',
-      auditEntryBg: '#000000',
-      auditEntryBorder: '#166534',
-      auditBtnExportBg: '#000000',
-      auditBtnExportText: '#22c55e',
-      auditBtnClearBg: '#000000',
-      auditBtnClearText: '#f43f5e',
-      searchBarBg: '#000000',
-      searchBarBorder: '#166534',
-      filterBadgeActiveBg: '#22c55e',
-      filterBadgeActiveText: '#000000',
-      filterBadgeInactiveBg: '#000000',
-      filterBadgeInactiveText: '#15803d',
-      // 优化：黑客帝国的极高对比
-      countBadgeBg: '#050505',
-      countBadgeBorder: '#15803d',
-      countBadgeText: '#22c55e',
-      sortDropdownBg: '#000000',
-      sortDropdownBorder: '#15803d',
-      sortDropdownText: '#22c55e',
-      // Fix: Removed duplicate 'detailsHeaderBg' property
-      detailsHeaderBg: '#050505',
-      detailsHeaderBorder: '#166534',
-      detailsEditBtnBg: '#000000',
-      detailsEditBtnText: '#22c55e',
-      detailsEditActiveBtnBg: '#22c55e',
-      detailsEditActiveBtnText: '#000000',
-      detailsDialogBg: '#050505',
-      detailsDialogText: '#22c55e',
-      detailsDialogConfirmBg: '#22c55e',
-      detailsDialogConfirmText: '#000000',
-      prefCardBg: '#000000',
-      prefCardBorder: '#166534',
-      prefSwitchOn: '#22c55e',
-      prefSwitchOff: '#050505',
-      createTabBg: '#000000',
-      createTabActiveBg: '#22c55e',
-      createTabActiveText: '#000000',
-      createTabInactiveText: '#166534',
-      restoreBtnBg: '#22c55e',
-      restoreBtnText: '#000000',
-    }
-  },
-  {
-    id: 'sys-vscode-light',
-    name: 'VSCode Light (System)',
-    isSystem: true,
-    config: {
-      pageBg: '#ffffff',
-      headerBg: '#f8f8f8',
-      cardBg: '#ffffff',
-      accentColor: '#007acc',
-      textColor: '#3b3b3b',
-      sidebarBg: '#f8f8f8',
-      sidebarTextColor: '#616161',
-      sidebarActiveBg: '#e4e6f1',
-      sidebarActiveTextColor: '#000000',
-      primaryFontColor: '#3b3b3b',
-      secondaryFontColor: '#616161',
-      mutedFontColor: '#919191',
-      accentFontColor: '#007acc',
-      defaultCardTitleBg: '#f8f8f8',
-      defaultCardTitleColor: '#3b3b3b',
-      controlPanelBg: '#f3f3f3',
-      controlPanelBorder: '#dddddd',
-      widgetBg: '#ffffff',
-      widgetBorder: '#d5d5d5',
-      widgetText: '#3b3b3b',
-      auditEntryBg: '#ffffff',
-      auditEntryBorder: '#f0f0f0',
-      auditBtnExportBg: '#ffffff',
-      auditBtnExportText: '#007acc',
-      auditBtnClearBg: '#fee2e2',
-      auditBtnClearText: '#dc2626',
-      searchBarBg: '#ffffff',
-      searchBarBorder: '#cecece',
-      filterBadgeActiveBg: '#007acc',
-      filterBadgeActiveText: '#ffffff',
-      filterBadgeInactiveBg: '#f3f3f3',
-      filterBadgeInactiveText: '#616161',
-      // 优化：工业级质感
-      countBadgeBg: '#e1e4e8',
-      countBadgeBorder: '#d1d5da',
-      countBadgeText: '#24292e',
-      sortDropdownBg: '#ffffff',
-      sortDropdownBorder: '#cecece',
-      sortDropdownText: '#3b3b3b',
-      detailsHeaderBg: '#f8f8f8',
-      detailsHeaderBorder: '#e5e5e5',
-      detailsEditBtnBg: '#f3f3f3',
-      detailsEditBtnText: '#3b3b3b',
-      detailsEditActiveBtnBg: '#007acc',
-      detailsEditActiveBtnText: '#ffffff',
-      detailsDialogBg: '#ffffff',
-      detailsDialogText: '#3b3b3b',
-      detailsDialogConfirmBg: '#007acc',
-      detailsDialogConfirmText: '#ffffff',
-      prefCardBg: '#ffffff',
-      prefCardBorder: '#dddddd',
-      prefSwitchOn: '#007acc',
-      prefSwitchOff: '#f3f3f3',
-      createTabBg: '#f3f3f3',
-      createTabActiveBg: '#ffffff',
-      createTabActiveText: '#007acc',
-      createTabInactiveText: '#616161',
-      restoreBtnBg: '#2c2c2c',
-      restoreBtnText: '#ffffff',
-    }
-  },
-  {
-    id: 'sys-vscode-dark',
-    name: 'VSCode Dark (System)',
-    isSystem: true,
-    config: {
-      pageBg: '#1e1e1e',
-      headerBg: '#181818',
-      cardBg: '#252526',
-      accentColor: '#007acc',
-      textColor: '#cccccc',
-      sidebarBg: '#181818',
-      sidebarTextColor: '#858585',
-      sidebarActiveBg: '#37373d',
-      sidebarActiveTextColor: '#ffffff',
-      primaryFontColor: '#cccccc',
-      secondaryFontColor: '#858585',
-      mutedFontColor: '#616161',
-      accentFontColor: '#4fc1ff',
-      defaultCardTitleBg: '#181818',
-      defaultCardTitleColor: '#cccccc',
-      controlPanelBg: '#252526',
-      controlPanelBorder: '#333333',
-      widgetBg: '#3c3c3c',
-      widgetBorder: '#454545',
-      widgetText: '#cccccc',
-      auditEntryBg: '#252526',
-      auditEntryBorder: '#333333',
-      auditBtnExportBg: '#2d2d2d',
-      auditBtnExportText: '#cccccc',
-      auditBtnClearBg: '#450a0a',
-      auditBtnClearText: '#fecdd3',
-      searchBarBg: '#3c3c3c',
-      searchBarBorder: '#454545',
-      filterBadgeActiveBg: '#007acc',
-      filterBadgeActiveText: '#ffffff',
-      filterBadgeInactiveBg: '#252526',
-      filterBadgeInactiveText: '#858585',
-      // 优化：沉浸感与可读性并存
-      countBadgeBg: '#252526',
-      countBadgeBorder: '#454545',
-      countBadgeText: '#cccccc',
-      sortDropdownBg: '#3c3c3c',
-      sortDropdownBorder: '#454545',
-      sortDropdownText: '#ffffff',
-      detailsHeaderBg: '#181818',
-      detailsHeaderBorder: '#333333',
-      detailsEditBtnBg: '#3c3c3c',
-      detailsEditBtnText: '#cccccc',
-      detailsEditActiveBtnBg: '#007acc',
-      detailsEditActiveBtnText: '#ffffff',
-      detailsDialogBg: '#252526',
-      detailsDialogText: '#cccccc',
-      detailsDialogConfirmBg: '#007acc',
-      detailsDialogConfirmText: '#ffffff',
-      prefCardBg: '#252526',
-      prefCardBorder: '#333333',
-      prefSwitchOn: '#007acc',
-      prefSwitchOff: '#181818',
-      createTabBg: '#252526',
-      createTabActiveBg: '#3c3c3c',
-      createTabActiveText: '#4fc1ff',
-      createTabInactiveText: '#858585',
-      restoreBtnBg: '#ffffff',
-      restoreBtnText: '#181818',
-    }
   }
 ];
 
 export const styleProfileService = {
-  getProfiles(): StyleProfile[] {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const userProfiles = saved ? JSON.parse(saved) : [];
+  async getProfiles(): Promise<StyleProfile[]> {
+    const userProfiles = await platformAdapter.loadData<StyleProfile[]>(KEY_PROFILES) || [];
     return [...SYSTEM_PRESETS, ...userProfiles];
   },
 
-  saveProfiles(profiles: StyleProfile[]) {
+  async saveProfiles(profiles: StyleProfile[]) {
     const userOnly = profiles.filter(p => !p.isSystem);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userOnly));
+    await platformAdapter.saveData(KEY_PROFILES, userOnly);
   },
 
-  getActiveProfileId(): string {
-    return localStorage.getItem(ACTIVE_PROFILE_KEY) || 'sys-light';
+  async getActiveProfileId(): Promise<string> {
+    const id = localStorage.getItem(KEY_ACTIVE_ID);
+    return id || 'sys-light';
   },
 
-  setActiveProfileId(id: string) {
-    localStorage.setItem(ACTIVE_PROFILE_KEY, id);
+  async setActiveProfileId(id: string) {
+    localStorage.setItem(KEY_ACTIVE_ID, id);
   },
 
-  addProfile(name: string, settings: UISettings): StyleProfile {
+  async addProfile(name: string, settings: UISettings): Promise<StyleProfile> {
     const { activeLibraryId, fontSize, uiScale, cardScale, ...pureConfig } = settings;
     const newProfile: StyleProfile = {
       id: crypto.randomUUID(),
@@ -366,27 +166,28 @@ export const styleProfileService = {
       config: pureConfig,
       isSystem: false
     };
-    const current = this.getProfiles();
-    this.saveProfiles([...current, newProfile]);
+    const current = await this.getProfiles();
+    await this.saveProfiles([...current, newProfile]);
     return newProfile;
   },
 
-  updateProfileName(id: string, newName: string) {
-    const current = this.getProfiles();
+  async updateProfileName(id: string, newName: string) {
+    const current = await this.getProfiles();
     const updated = current.map(p => (p.id === id && !p.isSystem) ? { ...p, name: newName } : p);
-    this.saveProfiles(updated);
+    await this.saveProfiles(updated);
   },
 
-  deleteProfile(id: string) {
-    const current = this.getProfiles();
+  async deleteProfile(id: string) {
+    const current = await this.getProfiles();
     const filtered = current.filter(p => p.id !== id || p.isSystem);
-    this.saveProfiles(filtered);
-    if (this.getActiveProfileId() === id) {
-      this.setActiveProfileId('sys-light');
+    await this.saveProfiles(filtered);
+    const activeId = await this.getActiveProfileId();
+    if (activeId === id) {
+      await this.setActiveProfileId('sys-light');
     }
   },
 
-  importProfile(json: string): StyleProfile | null {
+  async importProfile(json: string): Promise<StyleProfile | null> {
     try {
       const parsed = JSON.parse(json);
       const config = parsed.config || parsed;
@@ -399,8 +200,8 @@ export const styleProfileService = {
           config,
           isSystem: false
         };
-        const current = this.getProfiles();
-        this.saveProfiles([...current, newProfile]);
+        const current = await this.getProfiles();
+        await this.saveProfiles([...current, newProfile]);
         return newProfile;
       }
       return null;

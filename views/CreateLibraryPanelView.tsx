@@ -9,6 +9,7 @@ interface CreateLibraryPanelViewProps {
   onClose: () => void;
   onCreate: (lib: Library) => void;
   settings: UISettings;
+  addLog: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const SYSTEM_DEFAULT_TAG: Tag = { 
@@ -23,7 +24,8 @@ const SYSTEM_DEFAULT_TAG: Tag = {
 export const CreateLibraryPanelView: React.FC<CreateLibraryPanelViewProps> = ({
   onClose,
   onCreate,
-  settings
+  settings,
+  addLog
 }) => {
   const [activeTab, setActiveTab] = useState<'empty' | 'file' | 'text'>('empty');
   const [name, setName] = useState('');
@@ -69,7 +71,7 @@ export const CreateLibraryPanelView: React.FC<CreateLibraryPanelViewProps> = ({
       const newLib = sanitizeLibraryData(p);
       onCreate(newLib);
     } catch (err) {
-      alert('文件解析失败：非法的书库 JSON 数据');
+      addLog('文件解析失败：非法的书库 JSON 数据', 'error');
     }
   };
 
@@ -80,7 +82,7 @@ export const CreateLibraryPanelView: React.FC<CreateLibraryPanelViewProps> = ({
       const newLib = sanitizeLibraryData(p);
       onCreate(newLib);
     } catch (err) {
-      alert('文本解析错误：非法的 JSON 数据');
+      addLog('文本解析错误：非法的 JSON 数据', 'error');
     }
   };
 

@@ -8,26 +8,28 @@ interface StyleProfileDropdownProps {
   currentSettings: UISettings;
   onApply: (config: Partial<UISettings>) => void;
   showDialog: (config: any) => void;
+  addLog: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({ 
   currentSettings, 
   onApply,
-  showDialog
+  showDialog,
+  addLog
 }) => {
   const [profiles, setProfiles] = useState<StyleProfile[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
 
-  const refreshProfiles = () => {
-    const allProfiles = styleProfileService.getProfiles();
+  const refreshProfiles = async () => {
+    const allProfiles = await styleProfileService.getProfiles();
     setProfiles(allProfiles);
-    const activeId = styleProfileService.getActiveProfileId();
+    const activeId = await styleProfileService.getActiveProfileId();
     if (allProfiles.some(p => p.id === activeId)) {
       setSelectedId(activeId);
     } else {
       const firstId = allProfiles[0].id;
       setSelectedId(firstId);
-      styleProfileService.setActiveProfileId(firstId);
+      await styleProfileService.setActiveProfileId(firstId);
     }
   };
 
@@ -35,9 +37,9 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
     refreshProfiles();
   }, []);
 
-  const handleSelect = (id: string) => {
+  const handleSelect = async (id: string) => {
     setSelectedId(id);
-    styleProfileService.setActiveProfileId(id);
+    await styleProfileService.setActiveProfileId(id);
     const profile = profiles.find(p => p.id === id);
     if (profile) {
       onApply(profile.config);
@@ -50,12 +52,12 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
       title: '创建样式快照',
       message: '将当前所有颜色与布局设置保存为一个新样式：',
       placeholder: '例如：我的极简黑...',
-      onConfirm: (name?: string) => {
+      onConfirm: async (name?: string) => {
         if (name?.trim()) {
-          const newP = styleProfileService.addProfile(name.trim(), currentSettings);
-          refreshProfiles();
+          const newP = await styleProfileService.addProfile(name.trim(), currentSettings);
+          await refreshProfiles();
           setSelectedId(newP.id);
-          styleProfileService.setActiveProfileId(newP.id);
+          await styleProfileService.setActiveProfileId(newP.id);
         }
       }
     });
@@ -67,17 +69,18 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
 
     try {
       const content = await platformAdapter.readTextFile(files[0]);
-      const imported = styleProfileService.importProfile(content);
+      const imported = await styleProfileService.importProfile(content);
       if (imported) {
-        refreshProfiles();
+        await refreshProfiles();
         setSelectedId(imported.id);
-        styleProfileService.setActiveProfileId(imported.id);
+        await styleProfileService.setActiveProfileId(imported.id);
         onApply(imported.config);
+        addLog(`成功导入视觉方案: ${imported.name}`, 'success');
       } else {
-        alert('导入失败：无效的样式配置 JSON');
+        addLog('导入失败：无效的样式配置 JSON', 'error');
       }
     } catch (err) {
-      alert('文件读取失败');
+      addLog('文件读取失败', 'error');
     }
   };
 
@@ -90,10 +93,10 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
       title: '重命名样式',
       message: `为 "${profile.name}" 输入一个新名称：`,
       placeholder: profile.name,
-      onConfirm: (newName?: string) => {
+      onConfirm: async (newName?: string) => {
         if (newName?.trim()) {
-          styleProfileService.updateProfileName(selectedId, newName.trim());
-          refreshProfiles();
+          await styleProfileService.updateProfileName(selectedId, newName.trim());
+          await refreshProfiles();
         }
       }
     });
@@ -105,6 +108,7 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
     
     const data = JSON.stringify(profile, null, 2);
     await platformAdapter.saveFile(data, `Style_${profile.name.replace(/\s+/g, '_')}.json`);
+    addLog(`视觉方案 "${profile.name}" 已导出`, 'success');
   };
 
   const handleDelete = () => {
@@ -116,15 +120,13 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
       variant: 'danger',
       title: '删除视觉样式',
       message: `确定要永久移除样式 "${profile.name}" 吗？此操作不可撤销。`,
-      onConfirm: () => {
-        styleProfileService.deleteProfile(selectedId);
-        refreshProfiles();
+      onConfirm: async () => {
+        await styleProfileService.deleteProfile(selectedId);
+        await refreshProfiles();
+        addLog(`视觉方案 "${profile.name}" 已移除`, 'info');
       }
     });
   };
-
-  const currentProfile = profiles.find(p => p.id === selectedId);
-  const isCurrentSystem = currentProfile?.isSystem;
 
   return (
     <div className="flex items-center space-x-2 animate-in fade-in duration-500">
@@ -152,54 +154,21 @@ export const StyleProfileDropdown: React.FC<StyleProfileDropdownProps> = ({
               </option>
             ))}
           </select>
-          
           <div className="w-px h-4 mx-2 opacity-10" style={{ backgroundColor: currentSettings.widgetText }}></div>
-          
           <div className="flex items-center space-x-0.5">
-            <button 
-              onClick={handleSnapshot}
-              title="保存当前快照"
-              className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all"
-              style={{ color: currentSettings.widgetText }}
-            >
+            <button onClick={handleSnapshot} title="保存当前快照" className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all" style={{ color: currentSettings.widgetText }}>
               <i className="fa-solid fa-camera text-[10px]"></i>
             </button>
-            
-            <button 
-              onClick={handleFileImport}
-              title="从文件导入样式"
-              className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all"
-              style={{ color: currentSettings.widgetText }}
-            >
+            <button onClick={handleFileImport} title="从文件导入样式" className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all" style={{ color: currentSettings.widgetText }}>
               <i className="fa-solid fa-file-import text-[10px]"></i>
             </button>
-
-            <button 
-              onClick={handleExportFile}
-              title="导出所选样式"
-              className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all"
-              style={{ color: currentSettings.widgetText }}
-            >
+            <button onClick={handleExportFile} title="导出所选样式" className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all" style={{ color: currentSettings.widgetText }}>
               <i className="fa-solid fa-download text-[10px]"></i>
             </button>
-
-            <button 
-              onClick={handleRename}
-              disabled={isCurrentSystem}
-              title={isCurrentSystem ? "系统方案不可重命名" : "重命名"}
-              className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all disabled:opacity-10"
-              style={{ color: currentSettings.widgetText }}
-            >
+            <button onClick={handleRename} disabled={!selectedId || profiles.find(p => p.id === selectedId)?.isSystem} className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all disabled:opacity-10" style={{ color: currentSettings.widgetText }}>
               <i className="fa-solid fa-pen text-[10px]"></i>
             </button>
-
-            <button 
-              onClick={handleDelete}
-              disabled={isCurrentSystem}
-              title={isCurrentSystem ? "系统方案不可删除" : "删除样式"}
-              className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all disabled:opacity-10"
-              style={{ color: currentSettings.widgetText }}
-            >
+            <button onClick={handleDelete} disabled={!selectedId || profiles.find(p => p.id === selectedId)?.isSystem} className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded-lg transition-all disabled:opacity-10" style={{ color: currentSettings.widgetText }}>
               <i className="fa-solid fa-trash-can text-[10px]"></i>
             </button>
           </div>

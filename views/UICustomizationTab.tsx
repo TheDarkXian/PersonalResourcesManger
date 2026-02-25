@@ -9,6 +9,7 @@ interface UICustomizationTabProps {
   setSettings: (s: UISettings) => void;
   showDialog: (config: any) => void;
   onResetVisuals: () => void;
+  addLog: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const ColorItem: React.FC<{
@@ -79,7 +80,7 @@ const ColorPickerGroup: React.FC<{
   );
 };
 
-export const UICustomizationTab: React.FC<UICustomizationTabProps> = ({ settings, setSettings, showDialog, onResetVisuals }) => {
+export const UICustomizationTab: React.FC<UICustomizationTabProps> = ({ settings, setSettings, showDialog, onResetVisuals, addLog }) => {
   const updateSetting = (key: keyof UISettings, value: any) => {
     setSettings({ ...settings, [key]: value });
   };
@@ -102,6 +103,7 @@ export const UICustomizationTab: React.FC<UICustomizationTabProps> = ({ settings
            currentSettings={settings} 
            onApply={applyPresetConfig} 
            showDialog={showDialog}
+           addLog={addLog}
          />
       </div>
 

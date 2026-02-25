@@ -183,7 +183,7 @@ export const SystemPreferencesView: React.FC<SystemPreferencesViewProps> = ({
             )}
 
             {activeTab === 'ui' && (
-              <UICustomizationTab settings={settings} setSettings={setSettings} showDialog={showDialog} onResetVisuals={onResetVisuals} />
+              <UICustomizationTab settings={settings} setSettings={setSettings} showDialog={showDialog} onResetVisuals={onResetVisuals} addLog={addLog} />
             )}
 
             {activeTab === 'maintenance' && (

@@ -44,8 +44,8 @@ const SYSTEM_DEFAULT_TAG: Tag = {
   isDefault: true 
 };
 
-const STORAGE_KEY_LIBRARIES = 'resource_nav_libraries_v7';
-const STORAGE_KEY_SETTINGS = 'resource_nav_settings_v7';
+const KEY_LIBRARIES = 'resource_nav_libraries_v7';
+const KEY_SETTINGS = 'resource_nav_settings_v7';
 
 const DEFAULT_SETTINGS: UISettings = {
   fontSize: 100,
@@ -83,7 +83,6 @@ const DEFAULT_SETTINGS: UISettings = {
   filterBadgeActiveText: '#ffffff',
   filterBadgeInactiveBg: '#ffffff',
   filterBadgeInactiveText: '#64748b',
-  // 优化：明亮模式下增强计数区与排序区的对比
   countBadgeBg: '#f1f5f9', 
   countBadgeBorder: '#cbd5e1',
   countBadgeText: '#475569',
@@ -125,6 +124,8 @@ const ResourceNavigator = () => {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [settings, setSettings] = useState<UISettings>(DEFAULT_SETTINGS);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isStorageReady, setIsStorageReady] = useState(false);
+  const [storagePath, setStoragePath] = useState<string | null>(null);
   
   const [activeModal, setActiveModal] = useState<'resource' | 'resource-create' | 'preferences' | 'tag-center' | 'batch-tag' | 'dir-import' | 'library-creation' | 'filter-settings' | null>(null);
   
@@ -165,6 +166,89 @@ const ResourceNavigator = () => {
 
   const [sessionFileMap, setSessionFileMap] = useState<Map<string, File>>(new Map());
 
+  const addLog = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setLogs(p => [{ id: Date.now(), message, type, timestamp: Date.now() }, ...p].slice(0, 100));
+  }, []);
+
+  /**
+   * 初始化存储引导
+   */
+  const handleSetupStorage = async () => {
+    const files = await platformAdapter.pickDirectory();
+    if (files) {
+      // 模拟获取路径。在真实 Tauri 中，此处应获取物理路径字符串
+      const path = (files as any)[0]?.webkitRelativePath?.split('/')[0] || 'Documents/NavProData';
+      await platformAdapter.setStorageRoot(path);
+      setStoragePath(path);
+      setIsStorageReady(true);
+      addLog(`物理存储节点已挂载至: ${path}`, 'success');
+    }
+  };
+
+  const createDefaultLibrary = useCallback(() => {
+    const newLib: Library = {
+      id: crypto.randomUUID(),
+      name: '我的主书库',
+      resources: [],
+      tags: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      history: [auditService.createEntry('库创建', '初始库已生成')]
+    };
+    setLibraries([newLib]);
+    setSettings(prev => ({ ...prev, activeLibraryId: newLib.id }));
+    return newLib;
+  }, []);
+
+  // 1. 初始化存储引擎
+  useEffect(() => {
+    const bootstrap = async () => {
+      const res = await platformAdapter.initStorage();
+      if (res.ready) {
+        setStoragePath(res.path || 'LocalStorage');
+        
+        // 异步加载数据
+        const savedLibs = await platformAdapter.loadData<Library[]>(KEY_LIBRARIES);
+        const savedSettings = await platformAdapter.loadData<UISettings>(KEY_SETTINGS);
+
+        if (savedSettings) {
+          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...savedSettings }));
+        }
+
+        if (savedLibs && Array.isArray(savedLibs)) {
+          setLibraries(savedLibs);
+        } else {
+          createDefaultLibrary();
+        }
+
+        setIsStorageReady(true);
+      } else {
+        // 桌面端环境但未初始化路径
+        setIsStorageReady(false);
+      }
+    };
+    bootstrap();
+  }, [createDefaultLibrary]);
+
+  // 2. 异步持久化逻辑
+  useEffect(() => {
+    if (!isStorageReady) return;
+
+    const persist = async () => {
+      try {
+        const libsToSave = libraries.map(lib => ({
+          ...lib,
+          tags: lib.tags.filter(t => t.id !== DEFAULT_TAG_ID)
+        }));
+        await platformAdapter.saveData(KEY_LIBRARIES, libsToSave);
+        await platformAdapter.saveData(KEY_SETTINGS, settings);
+      } catch (error) {
+        console.error("Persistence failed:", error);
+      }
+    };
+    persist();
+  }, [libraries, settings, isStorageReady]);
+
   const activeLibrary = useMemo(() => {
     return libraries.find(l => l.id === settings.activeLibraryId) || (libraries.length > 0 ? libraries[0] : undefined);
   }, [libraries, settings.activeLibraryId]);
@@ -190,10 +274,6 @@ const ResourceNavigator = () => {
 
   const updateEditingResource = useCallback((updates: Partial<Resource>) => {
     setEditingResource(prev => prev ? { ...prev, ...updates } : null);
-  }, []);
-
-  const addLog = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setLogs(p => [{ id: Date.now(), message, type, timestamp: Date.now() }, ...p].slice(0, 100));
   }, []);
 
   const showDialog = useCallback((config: Partial<DialogState>) => {
@@ -238,56 +318,6 @@ const ResourceNavigator = () => {
     localStorage.removeItem('ui_active_style_profile_id');
     addLog('界面视觉引擎已回滚至出厂配置', 'info');
   }, [settings.activeLibraryId, addLog]);
-
-  const createDefaultLibrary = useCallback(() => {
-    const newLib: Library = {
-      id: crypto.randomUUID(),
-      name: '我的主书库',
-      resources: [],
-      tags: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      history: [auditService.createEntry('库创建', '初始库已生成')]
-    };
-    setLibraries([newLib]);
-    setSettings(prev => ({ ...prev, activeLibraryId: newLib.id }));
-    return newLib;
-  }, []);
-
-  useEffect(() => {
-    const savedLibs = localStorage.getItem(STORAGE_KEY_LIBRARIES);
-    const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
-    
-    if (savedSettings) {
-      try { 
-        const parsed = JSON.parse(savedSettings);
-        setSettings(prev => ({ ...DEFAULT_SETTINGS, ...parsed })); 
-      } catch(e) {}
-    }
-
-    if (savedLibs) {
-      try { 
-        const parsed = JSON.parse(savedLibs);
-        if (Array.isArray(parsed)) setLibraries(parsed);
-        else createDefaultLibrary();
-      } catch(e) { createDefaultLibrary(); }
-    } else {
-      createDefaultLibrary();
-    }
-  }, [createDefaultLibrary]);
-
-  useEffect(() => {
-    try {
-      const libsToSave = libraries.map(lib => ({
-        ...lib,
-        tags: lib.tags.filter(t => t.id !== DEFAULT_TAG_ID)
-      }));
-      localStorage.setItem(STORAGE_KEY_LIBRARIES, JSON.stringify(libsToSave));
-      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
-    } catch (error) {
-      console.error("LocalStorage persistence failed:", error);
-    }
-  }, [libraries, settings]);
 
   const filteredList = useMemo(() => {
     return filterService.filterResources(resources, {
@@ -501,7 +531,29 @@ const ResourceNavigator = () => {
     }
   };
 
-  if (libraries.length === 0) {
+  // 如果正在桌面端环境但存储路径未配置，显示引导界面
+  if (!isStorageReady && platformAdapter.isTauri()) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-700" style={{ backgroundColor: settings.pageBg }}>
+         <div className="w-24 h-24 rounded-[2rem] shadow-2xl flex items-center justify-center mb-10 rotate-3 animate-bounce border-4 border-white" style={{ backgroundColor: settings.accentColor }}>
+            <i className="fa-solid fa-hard-drive text-white text-3xl"></i>
+         </div>
+         <h1 className="text-4xl font-black italic tracking-tighter uppercase mb-4" style={{ color: settings.primaryFontColor }}>配置桌面存储节点</h1>
+         <p className="text-sm font-bold max-w-md leading-relaxed mb-12" style={{ color: settings.secondaryFontColor }}>
+           系统检测到您正在运行桌面客户端。为了获得更稳定的性能并打破浏览器存储限制，请选择一个文件夹作为应用的物理存储地点。
+         </p>
+         <button 
+           onClick={handleSetupStorage}
+           className="px-12 py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-2xl active:scale-95"
+         >
+           选择存储文件夹
+         </button>
+      </div>
+    );
+  }
+
+  // 等待库数据加载
+  if (libraries.length === 0 && isStorageReady) {
     return (
       <div className="h-screen flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-700" style={{ backgroundColor: settings.pageBg }}>
          <div className="w-24 h-24 rounded-[2rem] shadow-2xl flex items-center justify-center mb-10 rotate-3 animate-bounce border-4 border-white" style={{ backgroundColor: settings.accentColor }}>
@@ -528,6 +580,7 @@ const ResourceNavigator = () => {
                 setActiveModal(null);
                 addLog(`书库 "${lib.name}" 已就绪`, 'success');
              }} 
+             addLog={addLog}
            />
          )}
          {settings.showConsole && <ConsolePanel logs={logs} onClear={() => setLogs([])} />}
@@ -650,7 +703,6 @@ const ResourceNavigator = () => {
           addLog(`导入了 ${processed.length} 个资源`, 'success'); 
           setActiveModal(null); 
         }} onTextImport={(parsed, newImplicitTags) => { 
-          // 核心逻辑升级：合并自动创建的新标签
           if (newImplicitTags && newImplicitTags.length > 0) {
             updateActiveLibraryData({ tags: [...tags, ...newImplicitTags] });
             addLog(`自动同步创建了 ${newImplicitTags.length} 个新标签`, 'info');
@@ -704,10 +756,10 @@ const ResourceNavigator = () => {
              setActiveModal('preferences');
              addLog(`新书库 "${lib.name}" 创建成功`, 'success');
           }} 
+          addLog={addLog}
         />
       )}
 
-      {/* 核心修改：筛选设置面板作为全屏 Modal 渲染 */}
       {activeModal === 'filter-settings' && (
         <FilterSettingsSidebar 
           isOpen={true} 
@@ -719,6 +771,13 @@ const ResourceNavigator = () => {
 
       <CustomDialog state={dialogState} onClose={() => setDialogState(p => ({...p, isOpen: false}))} setDialogState={setDialogState} />
       {settings.showConsole && <ConsolePanel logs={logs} onClear={() => setLogs([])} />}
+      
+      {/* 桌面端存储位置悬浮提示 */}
+      {platformAdapter.isTauri() && (
+        <div className="fixed bottom-4 left-4 z-[900] px-3 py-1 bg-white/40 backdrop-blur-md border border-black/5 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-400">
+           Node: {storagePath}
+        </div>
+      )}
     </div>
   );
 };
